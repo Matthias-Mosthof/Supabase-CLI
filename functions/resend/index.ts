@@ -3,19 +3,18 @@ import { Database } from "./types.ts";
 
 console.log("Hello from `resend` function!");
 
-type PostRecord = Database["public"]["Tables"]["posts"]["Row"];
+type MessageRecord = Database["public"]["Tables"]["messages"]["Row"];
 interface WebhookPayload {
-  type: "INSERT" | "UPDATE" | "DELETE";
+  type: "INSERT";
   table: string;
-  record: null | PostRecord;
+  record: null | MessageRecord;
   schema: "public";
-  old_record: null | PostRecord;
+  old_record: null | MessageRecord;
 }
 
 serve(async (req) => {
   const payload: WebhookPayload = await req.json();
-  const newPost = payload.record;
-  const deletedPost = payload.old_record;
+  const newMessage = payload.record;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -25,15 +24,13 @@ serve(async (req) => {
     },
     body: JSON.stringify({
       from: "Urlaubsgesellschaft <info@urlaubsgesellschaft.de>",
-      to: [deletedPost?.email ?? newPost?.email],
-      subject: deletedPost
-        ? "Post gelöshct"
-        : "Post erstellt",
-      html: deletedPost
-        ? `Hey ${deletedPost.name}, Post wurde gelöscht! Deine Email ${deletedPost?.email}`
-        : `Hey ${newPost?.name} Post wurde erstellt! Deine Email ${newPost?.email}`,
+      to: [newMessage?.toEmail],
+      subject: 'Du hast eine neue Nachricht erhalten!',
+      reply_to: newMessage?.fromEmail,
+      html: `Hallo ${newMessage?.toName}! Neue Nachricht von ${newMessage?.fromName}: ${newMessage?.text}`
     }),
   });
+
 
   const data = await res.json();
   console.log({ data });
